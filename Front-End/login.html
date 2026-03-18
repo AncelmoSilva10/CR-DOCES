@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - CR Doces</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="auth-card">
+        <div class="logo-container">
+            <img src="assets/cr-doces.png" alt="Logo CR Doces" class="logo-img">
+        </div>
+
+        <h2>Bem-vindo!</h2>
+        <p>Acesse sua conta na CR Doces</p>
+        
+        <div class="input-group">
+            <label>E-mail</label>
+            <input type="email" id="email" placeholder="exemplo@gmail.com">
+        </div>
+        
+        <div class="input-group">
+            <label>Senha</label>
+            <input type="password" id="password" placeholder="••••••••">
+        </div>
+
+        <button onclick="fazerLogin()">Entrar</button>
+        <div id="mensagem"></div>
+
+        <div class="link-footer">
+            Ainda não tem conta? <a href="cadastro.html">Cadastre-se</a>
+        </div>
+    </div>
+
+    <script>
+        async function fazerLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const msg = document.getElementById('mensagem');
+
+            try {
+                const response = await fetch('http://localhost:8080/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('token', data.Token); 
+                    localStorage.setItem('userName', data.name);
+                    msg.style.color = "green";
+                    msg.innerText = "Login realizado! Redirecionando...";
+                    setTimeout(() => window.location.href = 'dashboard.html', 1500);
+                } else {
+                    msg.style.color = "red";
+                    msg.innerText = "E-mail ou senha incorretos.";
+                }
+            } catch (e) {
+                msg.innerText = "Erro de conexão com o servidor.";
+            }
+        }
+    </script>
+</body>
+</html>

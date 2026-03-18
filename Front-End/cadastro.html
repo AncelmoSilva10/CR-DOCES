@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro - CR Doces</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="auth-card">
+        <div class="logo-container">
+            <img src="assets/cr-doces.png" alt="Logo CR Doces" class="logo-img">
+        </div>
+        <h2>Criar Conta</h2>
+        <p>Junte-se à nossa doçaria!</p>
+        
+        <div class="input-group">
+            <label>Nome Completo</label>
+            <input type="text" id="name" placeholder="Como quer ser chamado?">
+        </div>
+
+        <div class="input-group">
+            <label>E-mail</label>
+            <input type="email" id="email" placeholder="seu@email.com">
+        </div>
+        
+        <div class="input-group">
+            <label>Senha</label>
+            <input type="password" id="password" placeholder="Mínimo 6 caracteres">
+        </div>
+
+        <button onclick="fazerCadastro()">Cadastrar</button>
+        <div id="mensagem"></div>
+
+        <div class="link-footer">
+            Já tem conta? <a href="login.html">Faça Login</a>
+        </div>
+    </div>
+
+    <script>
+        async function fazerCadastro() {
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const msg = document.getElementById('mensagem');
+
+            try {
+                const response = await fetch('http://localhost:8080/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password })
+                });
+
+                if (response.ok) {
+                    msg.style.color = "green";
+                    msg.innerText = "Conta criada! Você já pode logar.";
+                    setTimeout(() => window.location.href = 'login.html', 2000);
+                } else {
+                    msg.style.color = "red";
+                    msg.innerText = "Erro no cadastro. E-mail já existe?";
+                }
+            } catch (e) {
+                msg.innerText = "Erro de conexão com o servidor.";
+            }
+        }
+    </script>
+</body>
+</html>
