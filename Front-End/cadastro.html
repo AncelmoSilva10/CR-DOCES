@@ -33,7 +33,7 @@
         <div id="mensagem"></div>
 
         <div class="link-footer">
-            Já tem conta? <a href="login.html">Faça Login</a>
+            Já tem conta? <a href="index.html">Faça Login</a>
         </div>
     </div>
 
@@ -54,7 +54,7 @@
                 if (response.ok) {
                     msg.style.color = "green";
                     msg.innerText = "Conta criada! Você já pode logar.";
-                    setTimeout(() => window.location.href = 'login.html', 2000);
+                    setTimeout(() => window.location.href = 'index.html', 2000);
                 } else {
                     msg.style.color = "red";
                     msg.innerText = "Erro no cadastro. E-mail já existe?";

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+    <main class="main-content">
+    <header class="header">
+    <div class="welcome-group">
+        <h2 id="userNameDisplay">Olá, Gestora</h2>
+        <p class="subtitle">Painel de Pedidos</p>
+    </div>
+    <div class="user-info">
+        <button class="btn-primary" onclick="abrirModalPedido()">+ Novo Pedido</button>
+        <button class="btn-logout" onclick="logout()">Sair</button>
+    </div>
+</header>
+
+    <section class="kpi-grid">
+        <div class="kpi-card">
+            <span class="kpi-title">Pendentes / Fazendo</span>
+            <span class="kpi-value" id="countAtivos">0</span>
+        </div>
+        <div class="kpi-card">
+            <span class="kpi-title">Faturamento (Hoje)</span>
+            <span class="kpi-value" id="faturamentoDia">R$ 0,00</span>
+        </div>
+    </section>
+
+    <section class="recent-orders">
+        <h3 class="section-title">Fila de Produção</h3>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Pedido</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaPedidos">
+                    </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<div id="modalPedido" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="fecharModalPedido()">&times;</span>
+        <h2>Novo Pedido</h2>
+        <form id="formNovoPedido">
+            <div class="input-group">
+                <label>Nome do Cliente</label>
+                <input type="text" id="cliente" placeholder="Ex: Maria Silva" required>
+            </div>
+            <div class="input-group">
+                <label>O que ela comprou? (Descrição)</label>
+                <textarea id="itens" placeholder="Ex: 2x Bolo de Pote, 5x Brigadeiros" required></textarea>
+            </div>
+            <div class="input-group">
+                <label>Valor Total (R$)</label>
+                <input type="number" id="valor" step="0.01" placeholder="0.00" required>
+            </div>
+            <button type="submit" class="btn-save">Registrar Pedido</button>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>
+
+<script>
+ const API_URL = "http://localhost:8080/api/pedidos";
+    const token = localStorage.getItem('token'); 
+
+// Se não houver token, volta para o login (segurança básica no front)
+if (!token && window.location.pathname.includes('dashboard.html')) {
+    window.location.href = "index.html";
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const user = localStorage.getItem('userName') || 'Gestora';
+    document.getElementById('userNameDisplay').innerText = `Olá, ${user}`;
+    carregarPedidos(); // Busca do Java ao abrir
+});
+
+// --- FUNÇÕES DE COMUNICAÇÃO COM O JAVA ---
+
+async function carregarPedidos() {
+    try {
+        const response = await fetch(API_URL, {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (response.status === 403) logout(); // Token expirado ou inválido
+        
+        const pedidos = await response.json();
+        renderizarTabela(pedidos);
+        atualizarKPIs(pedidos);
+    } catch (error) {
+        console.error("Erro ao carregar pedidos:", error);
+    }
+}
+
+async function salvarNovoPedido(e) {
+    e.preventDefault();
+
+    const novoPedido = {
+        cliente: document.getElementById('cliente').value,
+        itens: document.getElementById('itens').value,
+        valor: parseFloat(document.getElementById('valor').value)
+    };
+
+    try {
+        const response = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(novoPedido)
+        });
+
+        if (response.ok) {
+            fecharModalPedido();
+            carregarPedidos(); // Recarrega a lista atualizada
+        }
+    } catch (error) {
+        alert("Erro ao salvar pedido no servidor.");
+    }
+}
+
+async function avancarStatus(id, statusAtual) {
+    let novoStatus = "";
+    if (statusAtual === 'pendente') novoStatus = 'fazendo';
+    else if (statusAtual === 'fazendo') novoStatus = 'entregue';
+
+    try {
+        await fetch(`${API_URL}/${id}/status`, {
+            method: "PATCH",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(novoStatus)
+        });
+        carregarPedidos();
+    } catch (error) {
+        console.error("Erro ao atualizar status");
+    }
+}
+
+// --- FUNÇÕES DE TELA ---
+
+function renderizarTabela(lista) {
+    const tbody = document.getElementById('tabelaPedidos');
+    tbody.innerHTML = '';
+
+    lista.forEach(p => {
+        tbody.innerHTML += `
+            <tr>
+                <td data-label="Cliente"><strong>${p.cliente}</strong></td>
+                <td data-label="Pedido">${p.itens}</td>
+                <td data-label="Total">R$ ${p.valor.toFixed(2)}</td>
+                <td data-label="Status"><span class="status ${p.status.toLowerCase()}">${p.status.toUpperCase()}</span></td>
+                <td data-label="Ações">
+                    ${p.status !== 'entregue' ? 
+                        `<button class="btn-action" onclick="avancarStatus(${p.id}, '${p.status}')">Avançar ➔</button>` : 
+                        `✅ Finalizado`}
+                </td>
+            </tr>
+        `;
+    });
+}
+
+function atualizarKPIs(lista) {
+    const ativos = lista.filter(p => p.status !== 'entregue').length;
+    const faturamento = lista
+        .filter(p => p.status === 'entregue')
+        .reduce((sum, p) => sum + p.valor, 0);
+
+    document.getElementById('countAtivos').innerText = ativos;
+    document.getElementById('faturamentoDia').innerText = `R$ ${faturamento.toFixed(2)}`;
+}
+
+function abrirModalPedido() { document.getElementById('modalPedido').style.display = 'block'; }
+function fecharModalPedido() { 
+    document.getElementById('modalPedido').style.display = 'none';
+    document.getElementById('formNovoPedido').reset();
+}
+
+function logout() {
+    localStorage.clear();
+    window.location.href = "index.html";
+}
+
+// Escuta o formulário
+document.getElementById('formNovoPedido').addEventListener('submit', salvarNovoPedido);
+</script>
